@@ -19,9 +19,15 @@ static char int_to_duodec(int n) {
     return map[n % 12];
 }
 
-static const char *pc_names[12] = {
+static const char *sharp_names[12] = {
+    "A","A#","B","C","C#","D","D#","E","F","F#","G","G#"
+};
+
+static const char *flat_names[12] = {
     "A","Bb","B","C","Db","D","Eb","E","F","Gb","G","Ab"
 };
+
+
 
 typedef struct {
     int pc;
@@ -71,6 +77,9 @@ int main(int argc, char *argv[]) {
 
     Dict dict = create_dict(argv[4]);
 
+    const char **pc_names = NULL;
+
+
     for (int idx = 0; idx < n_chords; idx++) {
         /* Convert Time to Row. Rate: 11025/256 Hz [cite: 486] */
         int start_row = (int)(start_times[idx] * 11025.0 / 256.0);
@@ -81,6 +90,12 @@ int main(int argc, char *argv[]) {
 
         /* Step 2: Pitch Class Totals and Thresholding [cite: 503] */
         int *pc_totals = sum_with_period12(totals);
+
+        int pc_totals_raw[12];
+        for (int i = 0; i < 12; i++)
+            pc_totals_raw[i] = pc_totals[i];
+        
+
         long total_sum = 0;
         for (int i = 0; i < 12; i++) total_sum += pc_totals[i];
         
@@ -110,6 +125,46 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
+
+        if (idx == 0) {
+            printf("\n=== DEBUG RAW PC TOTALS (Chord 1) ===\n");
+            for (int i = 0; i < 12; i++) {
+                printf("PC %d raw = %d\n", i, pc_totals_raw[i]);
+            }
+            PCVol pcvol_raw[12];
+            for (int i = 0; i < 12; i++) {
+                pcvol_raw[i].pc  = i;
+                pcvol_raw[i].vol = pc_totals_raw[i];
+            }
+
+            /* Sort raw totals */
+            for (int i = 0; i < 11; i++) {
+                for (int j = i + 1; j < 12; j++) {
+                    if (pcvol_raw[j].vol > pcvol_raw[i].vol) {
+                        PCVol tmp = pcvol_raw[i];
+                        pcvol_raw[i] = pcvol_raw[j];
+                        pcvol_raw[j] = tmp;
+                    }
+                }
+            }
+            printf("\nSorted RAW PC totals:\n");
+            for (int i = 0; i < 12; i++) {
+                printf("(%d,%d) ", pcvol_raw[i].pc, pcvol_raw[i].vol);
+            }
+            printf("\nRAW tonic_pc = %d\n", pcvol_raw[0].pc);
+            printf("======================================\n\n");
+
+            int tonic_pc = pcvol_raw[0].pc;
+
+            /* Flats for: Bb, Db, Eb, Gb, Ab = PC 1,3,6,8,10 */
+            int prefers_flats =
+                (tonic_pc == 1 || tonic_pc == 3 || tonic_pc == 6 ||
+                 tonic_pc == 8 || tonic_pc == 10 || tonic_pc == 4);
+
+            pc_names = prefers_flats ? flat_names : sharp_names;
+        }
+        if (pc_names == NULL)
+            pc_names = flat_names;
 
         /* Step 5: Generate Word relative to loudest [cite: 508] */
         char word[13]; 
