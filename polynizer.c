@@ -232,28 +232,6 @@ int main(int argc, char *argv[]) {
         printf("\n");
 
 
-        if (idx == 4) {  // chord #5 (0-based index)
-        printf("\nDEBUG CHORD 5:\n");
-        printf("Rows: %d to %d\n", start_row, end_row);
-
-        printf("PC totals BEFORE threshold:\n");
-        for (int i = 0; i < 12; i++) printf("%d ", pc_totals[i]);
-        printf("\nTotal sum = %ld\n", total_sum);
-
-        // recompute thresholded:
-        printf("PC totals AFTER threshold:\n");
-        for (int i = 0; i < 12; i++) printf("%d ", pc_totals[i]);
-        printf("\n");
-
-        printf("Sorted PC order (pc,vol):\n");
-        for (int i = 0; i < 12; i++)
-            printf("(%d,%d) ", pcvol[i].pc, pcvol[i].vol);
-        printf("\n");
-
-        printf("WORD: %s\n", word);
-        }
-
-
         free(totals);
         free(pc_totals);
         free(centroids);
