@@ -3,7 +3,7 @@
 
 struct trie_node {
     struct trie_node *children[12];
-    char *meaning;  // NULL unless full word ends here
+    char *meaning;
 };
 
 struct trie_node *trie_create_node();

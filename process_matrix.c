@@ -3,19 +3,27 @@
 #include <stdlib.h>
 #include "process_matrix.h"
 
-int *sum_subcols(int a [][88], int start, int end) {
+int *sum_subcols(int *a, int start, int end) {
     int *totals = malloc(88 * sizeof(int));
+
     for (int j = 0; j < 88; j++) {
         totals[j] = 0;
+
         for (int i = start; i < end; i++) {
-            totals[j] += a[i][j];
+            totals[j] += a[i * 88 + j];
         }
     }
+
     return totals;
 }
 
+
 int *sum_with_period12(int a[88]) {
     int *totals = malloc(12 * sizeof(int));
+
+    for (int k = 0; k < 12; k++)
+        totals[k] = 0;   // IMPORTANT FIX
+
     for (int k = 0; k < 12; k++) {
         for(int j = k; j < 88; j += 12) {
             totals[k] += a[j];
@@ -24,22 +32,23 @@ int *sum_with_period12(int a[88]) {
     return totals;
 }
 
-int *centroids_period12(int a[88]) {
-    double centroids[12]; 
+
+int *centroids_period12(int vols[88]) {
+    int *centroids = malloc(12 * sizeof(int));
+
     for (int k = 0; k < 12; k++) {
-        double num = 0, den = 0;
-        for(int j = k; j < 88; j += 12) {
-            den += a[j];
-            num += a[j] * j;
+        int sum = 0;
+        int count = 0;
+
+        for (int j = k; j < 88; j += 12) {
+            sum += vols[j];
+            count++;
         }
-        centroids[k] = num / den;
+
+        centroids[k] = (count > 0) ? (sum / count) : 0;
     }
-    // Quantize the centroids:
-    int *centroids_int = malloc(12 * sizeof(int));
-    for (int k = 0; k < 12; k++) {
-        centroids[k] = round((centroids[k] - k) / 12.0) * 12 + k;
-        centroids_int[k] = (int) centroids[k];
-    }
-    return centroids_int;
+
+    return centroids;
 }
+
 
