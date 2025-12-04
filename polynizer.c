@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "read_file.h"
 #include "process_matrix.h"
 #include "dictADT.h"
 
-/* Convert duodecimal character to integer (0..11). */
+/* Helpers for Duodecimal conversion */
 static int duodec_to_int(char c) {
     if (c >= '0' && c <= '9') return c - '0';
     if (c == 'A') return 10;
@@ -13,49 +14,44 @@ static int duodec_to_int(char c) {
     return 0;
 }
 
-/* Convert integer 0..11 to duodecimal character. */
 static char int_to_duodec(int n) {
     static const char map[12] = "0123456789AB";
     return map[n % 12];
 }
 
-/* Names of pitch classes from A (0) up to Ab (11). */
 static const char *pc_names[12] = {
     "A","Bb","B","C","Db","D","Eb","E","F","Gb","G","Ab"
 };
 
-/* Struct for pitch class and its volume. */
 typedef struct {
     int pc;
     int vol;
 } PCVol;
 
-/* Struct for one dictionary meaning after processing. */
 typedef struct {
-    int bass_pc;      // absolute bass class (0..11)
-    int root_pc;      // absolute root class (0..11)
-    int char_note;    // quantized centroid (from centroids array)
-    int delta;        // |char_note - main_centroid|
+    int bass_pc;
+    int root_pc;
+    int char_note;
     const char *root_name;
-    char type[64];    // chord suffix, may be empty
+    char type[64];
 } BRT;
 
-/* Sort BRT array by delta, then char_note, then root. */
-static void sort_brt(BRT *arr, int n) {
-    for (int i = 1; i < n; i++) {
-        BRT key = arr[i];
+/* Step 8: Sort by characteristic note (low to high). Stable sort.  */
+void stable_sort_meanings_BRT(BRT *meanings, int m) {
+    for (int i = 1; i < m; i++) {
+        BRT temp = meanings[i];
         int j = i - 1;
-        while (j >= 0 &&
-              (arr[j].delta > key.delta ||
-               (arr[j].delta == key.delta && arr[j].char_note > key.char_note) ||
-               (arr[j].delta == key.delta && arr[j].char_note == key.char_note &&
-                arr[j].root_pc > key.root_pc))) {
-            arr[j + 1] = arr[j];
+
+        while (j >= 0 && meanings[j].char_note > temp.char_note) {
+            meanings[j + 1] = meanings[j];
             j--;
         }
-        arr[j + 1] = key;
+
+        meanings[j + 1] = temp;
     }
 }
+
+
 
 int main(int argc, char *argv[]) {
     if (argc != 5) {
@@ -63,46 +59,48 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    /* Read the volume matrix (flattened) */
+    /* Print Headers */
+    printf("%s\n%s\n%s\n\n", argv[1], argv[2], argv[3]);
+
     int vol_size;
     int *vols = read_vols(argv[1], &vol_size);
 
-    /* Read start/end times; n_chords is determined by read_times() */
     int n_chords;
     double *start_times = read_times(argv[2], &n_chords);
     double *end_times   = read_times(argv[3], &n_chords);
 
-    /* Create dictionary for chord words */
     Dict dict = create_dict(argv[4]);
 
-    /* Process each chord interval */
     for (int idx = 0; idx < n_chords; idx++) {
-        /* Convert time to row index */
-        int start_row = (int)(start_times[idx] * 11025 / 256);
-        int end_row   = (int)(end_times[idx]   * 11025 / 256);
-        if (start_row < 0) start_row = 0;
+        /* Convert Time to Row. Rate: 11025/256 Hz [cite: 486] */
+        int start_row = (int)(start_times[idx] * 11025.0 / 256.0);
+        int end_row   = (int)(end_times[idx]   * 11025.0 / 256.0);
 
-        /* Step 1: Sum volumes per note */
+        /* Step 1: Sum volumes */
         int *totals = sum_subcols(vols, start_row, end_row);
 
-        /* Step 2: Sum totals into 12 pitch classes and drop < 3.5% */
+        /* Step 2: Pitch Class Totals and Thresholding [cite: 503] */
         int *pc_totals = sum_with_period12(totals);
-        int total_sum = 0;
+        long total_sum = 0;
         for (int i = 0; i < 12; i++) total_sum += pc_totals[i];
+        
+        /* Use integer arithmetic for strict 3.5% check */
         for (int i = 0; i < 12; i++) {
-            if (pc_totals[i] < (int)(0.035 * total_sum)) pc_totals[i] = 0;
+            if ((long)pc_totals[i] * 1000 < total_sum * 35) {
+                pc_totals[i] = 0;
+            }
         }
 
-        /* Step 3: Quantized centroids for each pitch class */
+        /* Step 3: Quantized Centroids */
         int *centroids = centroids_period12(totals);
 
-        /* Step 4: Sort pitch classes by volume */
+        /* Step 4: Sort classes by volume (descending) [cite: 507] */
         PCVol pcvol[12];
         for (int i = 0; i < 12; i++) {
             pcvol[i].pc  = i;
             pcvol[i].vol = pc_totals[i];
         }
-        /* simple bubble sort (descending) */
+        /* Bubble sort */
         for (int i = 0; i < 12 - 1; i++) {
             for (int j = i + 1; j < 12; j++) {
                 if (pcvol[j].vol > pcvol[i].vol) {
@@ -113,95 +111,101 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        /* Step 5: Form the 3-character duodecimal word */
-        char word[4]; word[3] = '\0';
-        for (int k = 1; k <= 3; k++) {
+        /* Step 5: Generate Word relative to loudest [cite: 508] */
+        char word[13]; 
+        int w_idx = 0;
+        /* Only include classes that survived the threshold (vol > 0) */
+        for (int k = 1; k < 12; k++) {
             if (pcvol[k].vol > 0) {
                 int interval = (pcvol[k].pc - pcvol[0].pc + 12) % 12;
-                word[k-1] = int_to_duodec(interval);
-            } else {
-                word[k-1] = '0';
+                word[w_idx++] = int_to_duodec(interval);
             }
         }
+        word[w_idx] = '\0';
 
-        /* Step 6: Dictionary lookup; search() returns meanings or NULL */
+        /* Step 6: Dictionary Search [cite: 510] 
+           Since you are using trie.c, 'search' maps to trie_search_longest_prefix,
+           so we do NOT need a loop here. */
         char *meaning_line = search(dict, word);
 
-        /* Prepare up to 3 chord names */
         char chord_names[3][64];
         int chord_count_out = 0;
 
         if (!meaning_line || *meaning_line == '\0') {
-            /* If no match, output just the main class name */
-            snprintf(chord_names[0], sizeof(chord_names[0]), "%s",
-                     pc_names[pcvol[0].pc]);
+            /* No match found */
+            snprintf(chord_names[0], sizeof(chord_names[0]), "%s", pc_names[pcvol[0].pc]);
             chord_count_out = 1;
         } else {
-            /* Count how many meanings separated by ';' */
-            int mcount = 1;
-            for (char *p = meaning_line; *p; p++)
-                if (*p == ';') mcount++;
+            /* Parse meanings separated by ';' */
+            int mcount = 0;
+            for (char *p = meaning_line; *p; p++) if (*p == ';') mcount++;
 
             BRT *meanings = malloc(mcount * sizeof(BRT));
             char *copy    = strdup(meaning_line);
             char *token   = strtok(copy, ";");
             int m = 0;
 
-            /* Step 7: Parse each meaning */
+            /* Step 7: Interpret Meanings [cite: 512] */
             while (token && m < mcount) {
-                /* Format: bass,root,type */
+
+                // Trim leading spaces
+                while (*token == ' ' || *token == '\n' || *token == '\t')
+                    token++;
+
                 char *c1 = strchr(token, ',');
-                char *c2 = strchr(c1 + 1, ',');
+                char *c2 = (c1 ? strchr(c1 + 1, ',') : NULL);
 
-                char bass_char = token[0];
+                if (c1 && c2) {
+                    // bass char = first non-space character
+                    char bass_char = token[0];
 
-                /* Skip spaces to find root char */
-                char *p = c1 + 1;
-                while (*p == ' ') p++;
-                char root_char = *p;
+                    // root char = first non-space character after c1
+                    char *root_ptr = c1 + 1;
+                    while (*root_ptr == ' ') root_ptr++;
+                    char root_char = *root_ptr;
 
-                /* Capture everything after second comma as type (trim leading spaces) */
-                char *q = c2 + 1;
-                while (*q == ' ') q++;
-                int tlen = 0;
-                while (q[tlen] && q[tlen] != ';' && q[tlen] != '\n' && q[tlen] != '\r')
-                    tlen++;
-                strncpy(meanings[m].type, q, tlen);
-                meanings[m].type[tlen] = '\0';
+                    // type = after second comma
+                    char *type_start = c2 + 1;
+                    while (*type_start == ' ') type_start++;
 
-                /* Convert relative classes to absolute */
-                int bass_rel = duodec_to_int(bass_char);
-                int root_rel = duodec_to_int(root_char);
+                    strncpy(meanings[m].type, type_start, 63);
+                    meanings[m].type[63] = '\0';
 
-                int bass_abs = (bass_rel + pcvol[0].pc) % 12;
-                int root_abs = (root_rel + pcvol[0].pc) % 12;
+                    // trim trailing whitespace
+                    size_t t = strlen(meanings[m].type);
+                    while (t > 0 && meanings[m].type[t-1] <= ' ')
+                        meanings[m].type[--t] = '\0';
 
-                meanings[m].bass_pc   = bass_abs;
-                meanings[m].root_pc   = root_abs;
-                meanings[m].char_note = centroids[bass_abs];
-                meanings[m].delta     = abs(centroids[bass_abs] - centroids[pcvol[0].pc]);
-                meanings[m].root_name = pc_names[root_abs];
+                    // convert bass/root
+                    int bass_rel = duodec_to_int(bass_char);
+                    int root_rel = duodec_to_int(root_char);
 
-                token = strtok(NULL, ";");
-                m++;
-            }
+                    int bass_abs = (bass_rel + pcvol[0].pc) % 12;
+                    int root_abs = (root_rel + pcvol[0].pc) % 12;
 
-            /* Step 8: Sort by delta (distance from main centroid), then char_note, then root_pc */
-            sort_brt(meanings, mcount);
+                    meanings[m].char_note = centroids[bass_abs];
+                    meanings[m].root_name = pc_names[root_abs];
 
-            /* Step 9: Construct chord names and remove duplicates. */
-            int ucount = 0;
-            for (int i = 0; i < mcount && ucount < 3; i++) {
-                char candidate[64];
-                if (meanings[i].type[0] == '\0') {
-                    snprintf(candidate, sizeof(candidate), "%s",
-                             meanings[i].root_name);
-                } else {
-                    snprintf(candidate, sizeof(candidate), "%s%s",
-                             meanings[i].root_name, meanings[i].type);
+                    m++;
                 }
 
-                /* Check for duplicates */
+                token = strtok(NULL, ";");
+            }
+
+
+            /* Step 8: Sort  */
+            stable_sort_meanings_BRT(meanings, m);
+
+            /* Step 9 & 10: Deduplicate and select top 3 [cite: 537] */
+            int ucount = 0;
+            for (int i = 0; i < m && ucount < 3; i++) {
+                char candidate[64];
+                if (meanings[i].type[0] == '\0') {
+                    snprintf(candidate, sizeof(candidate), "%s", meanings[i].root_name);
+                } else {
+                    snprintf(candidate, sizeof(candidate), "%s%s", meanings[i].root_name, meanings[i].type);
+                }
+
                 int duplicate = 0;
                 for (int j = 0; j < ucount; j++) {
                     if (strcmp(candidate, chord_names[j]) == 0) {
@@ -210,8 +214,7 @@ int main(int argc, char *argv[]) {
                     }
                 }
                 if (!duplicate) {
-                    snprintf(chord_names[ucount], sizeof(chord_names[ucount]),
-                             "%s", candidate);
+                    snprintf(chord_names[ucount], sizeof(chord_names[ucount]), "%s", candidate);
                     ucount++;
                 }
             }
@@ -221,20 +224,41 @@ int main(int argc, char *argv[]) {
             free(meanings);
         }
 
-        /* Print chord index, time, and up to three suggestions. */
+        /* Output */
         printf("%d: %.2f\n", idx + 1, start_times[idx]);
         for (int i = 0; i < chord_count_out; i++) {
             printf("%s\n", chord_names[i]);
         }
         printf("\n");
 
-        /* Free resources for this chord. */
+
+        if (idx == 4) {  // chord #5 (0-based index)
+        printf("\nDEBUG CHORD 5:\n");
+        printf("Rows: %d to %d\n", start_row, end_row);
+
+        printf("PC totals BEFORE threshold:\n");
+        for (int i = 0; i < 12; i++) printf("%d ", pc_totals[i]);
+        printf("\nTotal sum = %ld\n", total_sum);
+
+        // recompute thresholded:
+        printf("PC totals AFTER threshold:\n");
+        for (int i = 0; i < 12; i++) printf("%d ", pc_totals[i]);
+        printf("\n");
+
+        printf("Sorted PC order (pc,vol):\n");
+        for (int i = 0; i < 12; i++)
+            printf("(%d,%d) ", pcvol[i].pc, pcvol[i].vol);
+        printf("\n");
+
+        printf("WORD: %s\n", word);
+        }
+
+
         free(totals);
         free(pc_totals);
         free(centroids);
     }
 
-    /* Clean up global structures. */
     free(vols);
     free(start_times);
     free(end_times);

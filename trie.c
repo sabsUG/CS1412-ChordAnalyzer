@@ -27,8 +27,17 @@ void trie_insert(struct trie_node *root, const char *word, const char *meaning) 
         curr = curr->children[idx];
     }
 
-    curr->meaning = malloc(strlen(meaning) + 1);
-    strcpy(curr->meaning, meaning);
+    if (curr->meaning == NULL) {
+        curr->meaning = malloc(strlen(meaning) + 2);
+        strcpy(curr->meaning, meaning);
+        strcat(curr->meaning, ";");
+    } else {
+        curr->meaning = realloc(curr->meaning,
+            strlen(curr->meaning) + strlen(meaning) + 2);
+        strcat(curr->meaning, meaning);
+        strcat(curr->meaning, ";");
+    }
+
 }
 
 char *trie_search_longest_prefix(struct trie_node *root, const char *word) {
