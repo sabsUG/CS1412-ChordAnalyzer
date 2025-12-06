@@ -1,0 +1,73 @@
+data/Kiss - I was made for lovin' you.dat
+data/Kiss - I was made for lovin' you (intro).begin.txt
+data/Kiss - I was made for lovin' you (intro).end.txt
+
+1: 1.32
+Asus2
+E5
+Esus4
+
+2: 8.74
+Am
+B7sus4
+C
+
+3: 10.41
+Asus2
+E5
+Esus4
+
+4: 11.21
+D
+Em
+
+5: 12.50
+Asus2
+E5
+Esus4
+
+6: 16.08
+A5
+Asus2
+Esus4
+
+7: 17.85
+Asus2
+E5
+Esus4
+
+8: 18.59
+G
+D5
+A7sus4
+
+9: 20.05
+Em
+A7sus2
+F#m
+
+10: 23.74
+A5
+Asus2
+A7sus2
+
+11: 27.50
+Em
+A7sus2
+F#m
+
+12: 31.21
+A5
+A7no3
+Em
+
+13: 32.73
+E5
+Esus#4
+B1
+
+14: 33.66
+D5
+D
+A1
+

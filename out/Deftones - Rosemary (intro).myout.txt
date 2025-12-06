@@ -1,0 +1,11 @@
+data/Deftones - Rosemary.dat
+data/Deftones - Rosemary (intro).begin.txt
+data/Deftones - Rosemary (intro).end.txt
+
+1: 0.11
+G#
+
+2: 16.10
+Cm
+D#
+

@@ -1,0 +1,30 @@
+data/Soundgarden - Black hole sun-1.dat
+data/Soundgarden - Black hole sun (intro)-1.begin.txt
+data/Soundgarden - Black hole sun (intro)-1.end.txt
+
+1: 1.31
+G#5
+G#sus4
+D#7sus4
+
+2: 3.72
+B
+C#7sus2
+
+3: 5.91
+F#
+G#7sus4
+
+4: 8.24
+Fm
+G#
+
+5: 10.70
+E5
+Esus4
+B7sus4
+
+6: 13.00
+D#7no3
+A#m
+

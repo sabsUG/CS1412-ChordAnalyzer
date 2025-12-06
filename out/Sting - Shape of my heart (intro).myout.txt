@@ -1,0 +1,74 @@
+data/Sting - Shape of my heart.dat
+data/Sting - Shape of my heart (intro).begin.txt
+data/Sting - Shape of my heart (intro).end.txt
+
+1: 10.44
+F#m
+A
+
+2: 11.88
+C#m
+A
+
+3: 13.37
+Bm
+C#7sus4
+D
+
+4: 14.86
+Bsus2
+C#7sus4
+F#sus4
+
+5: 15.60
+C#7
+
+6: 16.37
+D
+
+7: 17.83
+C#m
+E
+
+8: 19.05
+Bm
+D
+
+9: 20.45
+C#7sus4
+Bsus2
+F#5
+
+10: 21.21
+C#7
+
+11: 21.91
+D
+Bm
+
+12: 24.69
+Asus2
+B7sus4
+Esus4
+
+13: 26.36
+C#
+
+14: 27.72
+D
+F
+
+15: 29.17
+G#7sus4
+G#7
+C#sus4
+
+16: 30.30
+F#5
+C#1
+
+17: 33.26
+F#m
+G#7sus4
+A
+
