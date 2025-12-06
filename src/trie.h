@@ -1,3 +1,8 @@
+// CS1412   –  Programming Principles  
+// Project:    Chord Analyzer (polynizer)  
+// Authors:    Josue Rodriguez, Arianna Saborío  
+// Instructor: Dr. Arturo Camacho
+
 #ifndef TRIE_H
 #define TRIE_H
 
