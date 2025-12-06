@@ -20,3 +20,5 @@ The output lists the three input files first, followed by blocks of:
 with a blank line between blocks.
 
 Internally, the program folds each 88-key row into 12 pitch classes, applies the 3.5% threshold, computes centroids, constructs the duodecimal word, and queries the trie for chord interpretations. Sharp/flat naming is chosen once based on the initial tonic and kept consistent throughout. All code and logic follow the specifications required for the assignment and the trie implementation fulfills the extra-credit requirement.
+
+Link to GitHub: https://github.com/sabsUG/CS1412-ChordAnalyzer
