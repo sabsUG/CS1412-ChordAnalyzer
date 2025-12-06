@@ -1,17 +1,31 @@
-polynizer: polynizer.o dictADT.o trie.o read_file.o process_matrix.o
-	gcc -Wall -Wextra -std=c11 -o polynizer polynizer.o dictADT.o trie.o read_file.o process_matrix.o
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c11 -O2
 
-polynizer.o: polynizer.c dictADT.h trie.h read_file.h process_matrix.h
-	gcc -Wall -Wextra -std=c11 -c polynizer.c
+SRC_DIR = src
+OBJ_DIR = obj
 
-dictADT.o: dictADT.c dictADT.h trie.h
-	gcc -Wall -Wextra -std=c11 -c dictADT.c
+SRC = $(SRC_DIR)/polynizer.c \
+      $(SRC_DIR)/dictADT.c \
+      $(SRC_DIR)/trie.c \
+      $(SRC_DIR)/read_file.c \
+      $(SRC_DIR)/process_matrix.c
 
-trie.o: trie.c trie.h
-	gcc -Wall -Wextra -std=c11 -c trie.c
+OBJ = $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
-read_file.o: read_file.c read_file.h
-	gcc -Wall -Wextra -std=c11 -c read_file.c
+TARGET = polynizer
 
-process_matrix.o: process_matrix.c process_matrix.h
-	gcc -Wall -Wextra -std=c11 -c process_matrix.c
+.PHONY: all clean dirs
+
+all: dirs $(TARGET)
+
+dirs:
+	mkdir -p $(OBJ_DIR) out
+
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $(OBJ)
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -rf $(OBJ_DIR) $(TARGET)
