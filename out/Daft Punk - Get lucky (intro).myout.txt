@@ -1,0 +1,36 @@
+data/Daft Punk - Get lucky.dat
+data/Daft Punk - Get lucky (intro).begin.txt
+data/Daft Punk - Get lucky (intro).end.txt
+
+1: 0.51
+Bm
+E7sus4
+D
+
+2: 2.56
+D
+
+3: 4.51
+F#m
+A
+
+4: 6.60
+E
+
+5: 8.72
+Bm
+D
+
+6: 10.79
+D
+
+7: 12.70
+F#m
+A
+Bm
+
+8: 14.65
+E
+A
+B7sus4
+

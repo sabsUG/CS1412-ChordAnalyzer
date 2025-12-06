@@ -1,3 +1,8 @@
+// CS1412   –  Programming Principles  
+// Project:    Chord Analyzer (polynizer)  
+// Authors:    Josue Rodriguez, Arianna Saborío  
+// Instructor: Dr. Arturo Camacho
+
 #include "read_file.h"
 #include <stdio.h>
 #include <stdlib.h>
